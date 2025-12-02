@@ -1,0 +1,16 @@
+mcp==1.22.0
+anyio==4.6.2.post1
+httpx==0.27.2
+httpx-sse==0.4.0
+jsonschema==4.23.0
+pydantic==2.9.2
+pydantic-settings==2.5.2
+pyjwt==2.9.0
+python-multipart==0.0.9
+sse-starlette==1.8.2
+starlette==0.40.0
+typing-inspection==0.3.1
+uvicorn==0.31.0
+
+# Local helpers used by MCP server
+sqlite-utils==3.36.0
