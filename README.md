@@ -61,10 +61,10 @@ All MCP tool calls (printed by the server)
 │   ├── db_access.py
 │   ├── db_utils.py
 │   ├── server.py
-│   └── support.db
+│   └── support.db # Auto-generated SQLite DB (delete this before re-running setup)
 │
 ├── tests
-│   └── main.py
+│   └── main.py # End-to-end test runner for all scenarios
 │
 ├── README.md
 └── requirements.txt
