@@ -45,6 +45,8 @@ All A2A communication logs
 All MCP tool calls (printed by the server)
 
 ## Project Structure
+
+```
 .
 ├── agents
 │   ├── data_agent.py
@@ -66,25 +68,33 @@ All MCP tool calls (printed by the server)
 │
 ├── README.md
 └── requirements.txt
+```
+
 
 ## Installation
 
 1. Create and activate virtual environment
+   ```
    python3 -m venv .venv
    source .venv/bin/activate
-   
-2. Install dependencies
+   ```
+3. Install dependencies
+   ```
    pip install -r requirements.txt
-
-3. Initialize database
+   ```
+5. Initialize database
+   ```
    python mcp_server/database_setup.py
+   ```
    
 ## How to Run the System
 
 ▶️ Run All Test Scenarios
 
 This script calls the router, triggers A2A flows, and interacts with the MCP server:
+```
 python -m tests.main
+```
 
 You will see:
 
