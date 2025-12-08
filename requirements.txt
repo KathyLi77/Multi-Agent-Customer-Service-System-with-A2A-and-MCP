@@ -14,3 +14,6 @@ uvicorn==0.31.0
 
 # Local helpers used by MCP server
 sqlite-utils==3.36.0
+
+openai>=1.0.0
+python-dotenv>=1.0.0

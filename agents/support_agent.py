@@ -1,71 +1,135 @@
+# agents/support_agent.py
+
+from typing import Any, Dict, List
+
+
 class SupportAgent:
-    name = "SupportAgent"
+    """
+    Support Agent:
+    - Turns raw DB info into helpful customer-support answers.
+    - Handles upgrade, cancellations, refunds, friendly summaries.
+    """
 
-    def log(self, state, sender, msg):
-        state.setdefault("messages", []).append(
-            {"from": sender, "to": self.name, "content": msg}
-        )
+    def summarize_customer(self, customer: Dict[str, Any]) -> str:
+        """
+        Summarize a single customer record.
 
-    # ------------------------------------------------
-    # Scenario 1: Upgrade account
-    # ------------------------------------------------
-    def handle_account_upgrade(self, state):
-        cust = state.get("customer")
-        if not cust:
-            return "Customer information not found."
+        Expected input shape from CustomerDataAgent:
+        - {"customer": <dict>} when found
+        - {"customer": None} or {} or None when not found
+        - We also guard against wrong types (e.g., a plain string) to avoid crashes.
+        """
+        if (
+            not customer
+            or "customer" not in customer
+            or customer["customer"] is None
+            or not isinstance(customer["customer"], dict)
+        ):
+            return "Customer not found."
 
-        name = cust.get("name", "Customer")
-        return f"Hello {name}! Your account is active. I can help upgrade your plan immediately."
+        c = customer["customer"]
 
-    # ------------------------------------------------
-    # Scenario 2: Billing escalation
-    # ------------------------------------------------
-    def handle_billing_escalation(self, state):
-        cust = state.get("customer")
-        cid = cust.get("id")
-
-        tickets = state.get("tickets", {}).get(cid, [])
-        active_issues = len([t for t in tickets if t["status"] != "resolved"])
+        name = c.get("name", "Unknown")
+        cid = c.get("id", "Unknown")
+        email = c.get("email", "N/A")
+        phone = c.get("phone", "N/A")
+        status = c.get("status", "N/A")
 
         return (
-            f"Billing team already has {active_issues} active issues for you. "
-            f"I have escalated to high priority."
+            f"Customer {name} (ID {cid})\n"
+            f"- Email: {email}\n"
+            f"- Phone: {phone}\n"
+            f"- Status: {status}\n"
         )
 
-    # ------------------------------------------------
-    # Scenario 3: High-priority ticket summary
-    # ------------------------------------------------
-    def summarize_high_priority_tickets(self, state):
-        tickets = state.get("high_priority_tickets", [])
-        if not tickets:
-            return "There are no high-priority tickets for premium customers."
+    def summarize_customers(
+        self,
+        customers: Dict[str, Any],
+        status: Any = None,
+    ) -> str:
+        """
+        Summarize a list of customers returned by DataAgent.list_customers().
 
-        lines = []
-        for t in tickets:
-            cid = t["customer_id"]
-            # Find the matching customer
-            cust_list = state.get("active_customers", [])
-            cust = next((c for c in cust_list if c["id"] == cid), None)
+        Expected input:
+        - {"customers": [customer_dict, ...]} or directly a list [{...}, ...]
+        """
+        # Support both {"customers": [...]} and plain list [...]
+        if isinstance(customers, dict) and "customers" in customers:
+            customer_list = customers["customers"]
+        else:
+            customer_list = customers
 
-            cname = cust["name"] if cust else f"Customer {cid}"
-            lines.append(
-                f"{cname}: Ticket {t['id']} — {t['issue']} [{t['status']}]"
-            )
+        if not customer_list:
+            return "No customers found."
+
+        header_status = f" (status={status})" if status else ""
+        lines: List[str] = [f"Customer List{header_status}:"]
+
+        for c in customer_list:
+            # Defensive access
+            cid = c.get("id", "Unknown")
+            name = c.get("name", "Unknown")
+            email = c.get("email", "N/A")
+            st = c.get("status", "N/A")
+            lines.append(f"- ID {cid}: {name} | {email} | {st}")
 
         return "\n".join(lines)
 
-    # ------------------------------------------------
-    # NEW: Scenario 4 – Multi-intent update + history
-    # ------------------------------------------------
-    def summarize_multi_intent(self, state, customer, updated_email, tickets):
-        name = customer.get("name", "Customer")
-        cid = customer.get("id", "?")
+    def summarize_tickets(self, history: Dict[str, Any]) -> str:
+        """
+        Summarize ticket history for a customer.
 
-        ticket_lines = "\n".join(
-            [f" - Ticket {t['id']}: {t['issue']} [{t['status']}]" for t in tickets]
-        ) or "No ticket history found."
+        Expected input shape from CustomerDataAgent.get_history:
+        - {"tickets": [ticket_dict, ...]}
+        - or {"tickets": []} if none
+        """
+        if not history or "tickets" not in history:
+            return "No ticket history found."
 
-        return (
-            f"Success! I've updated the email for customer {cid} ({name}) to {updated_email}.\n\n"
-            f"Here is your ticket history:\n{ticket_lines}"
-        )
+        tickets: List[Dict[str, Any]] = history["tickets"]
+        if not tickets:
+            return "No ticket history found."
+
+        lines = ["Ticket History:"]
+        for t in tickets:
+            tid = t.get("id", "Unknown")
+            issue = t.get("issue", "N/A")
+            status = t.get("status", "N/A")
+            priority = t.get("priority", "N/A")
+            created_at = t.get("created_at", "N/A")
+
+            lines.append(
+                f"- #{tid} | {issue} | {status} | {priority} | {created_at}"
+            )
+        return "\n".join(lines)
+
+    def build_final_answer(self, parts: List[str]) -> str:
+        """
+        Combine multiple reasoning results into a final coherent answer.
+
+        `parts` is a list of strings generated during routing:
+        - customer summaries
+        - ticket summaries
+        - small text notes like "Updated: {...}" or "Created ticket: ..."
+        """
+        cleaned = [p for p in parts if p]
+        if not cleaned:
+            return "I could not find any relevant information for your request."
+        return "\n".join(cleaned)
+
+    def upgrade_account(self, customer: Dict[str, Any]) -> str:
+        """
+        Optional helper for explicit upgrade-related flows.
+        Currently not wired directly by the Router, but can be used in
+        extended routing logic for upgrade scenarios.
+        """
+        if (
+            not customer
+            or "customer" not in customer
+            or customer["customer"] is None
+            or not isinstance(customer["customer"], dict)
+        ):
+            return "Upgrade failed — customer not found."
+
+        name = customer["customer"].get("name", "the customer")
+        return f"Account upgrade for {name} has been processed successfully!"

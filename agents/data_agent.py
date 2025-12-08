@@ -1,62 +1,64 @@
-from typing import Any, Dict, List
+# agents/data_agent.py
+
 from client.mcp_client import call_tool_sync
 
 
 class CustomerDataAgent:
-    name = "CustomerDataAgent"
+    """
+    MCP-backed Data Agent.
+    Contains dedicated methods + a dynamic fallback.
+    """
 
-    def log(self, state, sender, msg):
-        state.setdefault("messages", []).append(
-            {"from": sender, "to": self.name, "content": msg}
-        )
+    # ---------------------------
+    # Get customer
+    # ---------------------------
+    def get_customer(self, customer_id: int):
+        resp = call_tool_sync("get_customer", {"customer_id": customer_id})
+        return {"customer": resp}
 
-    # ------------------------------------------------
-    # GET CUSTOMER
-    # ------------------------------------------------
-    def get_customer_info(self, state, customer_id):
-        self.log(state, "RouterAgent", f"Get customer {customer_id}")
-        result = call_tool_sync("get_customer", {"customer_id": customer_id})
-        state["customer"] = result
-        return result
+    # ---------------------------
+    # Update customer
+    # ---------------------------
+    def update_customer(self, customer_id: int, updates: dict):
+        resp = call_tool_sync("update_customer", {
+            "customer_id": customer_id,
+            "data": updates
+        })
+        return {"updated": resp}
 
-    # ------------------------------------------------
-    # LIST ACTIVE CUSTOMERS
-    # ------------------------------------------------
-    def list_active_customers(self, state, limit=50):
-        self.log(state, "RouterAgent", "List active customers")
-        result = call_tool_sync("list_customers", {"status": "active", "limit": limit})
-        state["active_customers"] = result
-        return result
+    # ---------------------------
+    # List customers
+    # ---------------------------
+    def list_customers(self, status="active", limit=20):
+        resp = call_tool_sync("list_customers", {
+            "status": status,
+            "limit": limit
+        })
+        return {"customers": resp}
 
-    # ------------------------------------------------
-    # TICKET HISTORY
-    # ------------------------------------------------
-    def get_ticket_history(self, state, customer_id):
-        self.log(state, "RouterAgent", f"Get ticket history for {customer_id}")
-        result = call_tool_sync("get_customer_history", {"customer_id": customer_id})
-        state.setdefault("tickets", {})[customer_id] = result
-        return result
+    # ---------------------------
+    # Ticket history
+    # ---------------------------
+    def get_history(self, customer_id: int):
+        resp = call_tool_sync("get_customer_history", {
+            "customer_id": customer_id
+        })
+        return {"tickets": resp or []}
 
-    # ------------------------------------------------
-    # CREATE TICKET
-    # ------------------------------------------------
-    def create_ticket(self, state, customer_id, issue, priority="medium"):
-        payload = {
+    # ---------------------------
+    # Create ticket
+    # ---------------------------
+    def create_ticket(self, customer_id: int, issue: str, priority="medium"):
+        resp = call_tool_sync("create_ticket", {
             "customer_id": customer_id,
             "issue": issue,
             "priority": priority
-        }
-        self.log(state, "RouterAgent", f"Create ticket: {issue} ({priority})")
-        result = call_tool_sync("create_ticket", payload)
-        return result
-
-    # ------------------------------------------------
-    # UPDATE CUSTOMER 
-    # ------------------------------------------------
-    def update_customer(self, state, customer_id, data: dict):
-        self.log(state, "RouterAgent", f"Update customer {customer_id}: {data}")
-        result = call_tool_sync("update_customer", {
-            "customer_id": customer_id,
-            "data": data
         })
-        return result
+        return {"created": resp}
+
+    # ---------------------------
+    # Dynamic fallback
+    # ---------------------------
+    def call_dynamic(self, action: str, args: dict):
+        resp = call_tool_sync(action, args)
+        return {"result": resp}
