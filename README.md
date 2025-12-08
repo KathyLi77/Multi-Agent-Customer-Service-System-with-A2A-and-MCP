@@ -1,168 +1,90 @@
-# Multi-Agent Customer Service System with A2A + MCP
+# Multi-Agent Customer Service System (A2A + MCP)
 
-This project implements a full multi-agent customer service system where three specialized agents communicate using Agent-to-Agent (A2A) coordination and retrieve customer data through a Model Context Protocol (MCP) server.
-It fulfills all assignment requirements, including:
+This project implements a multi-agent customer service system where agents coordinate through **Agent-to-Agent (A2A)** communication and interact with a SQLite database via a **Model Context Protocol (MCP)** server.
 
-## 🤖 Agents
+The system includes:
+- **RouterAgent** – orchestrates tasks and routes queries
+- **CustomerDataAgent** – interacts with database tools through MCP
+- **SupportAgent** – generates final customer-facing responses
 
-Router Agent – orchestrates, routes, coordinates multi-step tasks
+---
 
-Customer Data Agent – retrieves/updates DB records through MCP tools
+## 1. System Architecture
 
-Support Agent – handles support actions, escalations, multi-intent responses
+The following diagram shows how the agents and MCP server communicate:
 
-## 💻 MCP Server Tools
+                     ┌────────────────────┐
+                     │      User Query    │
+                     └───────────┬────────┘
+                                 │
+                      (intent detection)
+                                 │
+                     ┌───────────▼───────────┐
+                     │     Router Agent      │
+                     └───────┬────────┬──────┘
+                             │        │
+            customer data    │        │ support request
+                             │        │
+            ┌────────────────▼ ┐   ┌──▼─────────────────┐
+            │ CustomerDataAgent│   │    SupportAgent    │
+            └──────────┬───────┘   └─────────┬──────────┘
+                       │ MCP Tools           │ builds final answer
+                       │                     │
+            ┌──────────▼─────────────────────▼───────────┐
+            │                 MCP Server                 │
+            │   SQLite DB + customers + tickets tables   │
+            └────────────────────────────────────────────┘
 
-get_customer(customer_id)
 
-list_customers(status, limit)
+---
 
-update_customer(customer_id, data)
+## 2. MCP Tools
 
-create_ticket(customer_id, issue, priority)
+The MCP server exposes the following operations:
 
-get_customer_history(customer_id)
+- `get_customer(customer_id)`
+- `list_customers(status, limit)`
+- `update_customer(customer_id, fields)`
+- `create_ticket(customer_id, issue, priority)`
+- `get_customer_history(customer_id)`
 
-## ✅ Scenarios Implemented
+These tools manage the **customers** and **tickets** tables defined in `database_setup.py`.
 
-1. Task allocation
+---
 
-2. Negotiation / escalation
+## 3. Installation
 
-3. Multi-step coordination
+```bash
+git clone https://github.com/KathyLi77/Multi-Agent-Customer-Service-System-with-A2A-and-MCP
+cd Multi-Agent-Customer-Service-System-with-A2A-and-MCP
 
-4. Multi-intent
-   Example: “update my email and show my ticket history”
+python3 -m venv .venv
+source .venv/bin/activate
 
-✅ End-to-End Tests
+pip install -r requirements.txt
 
-Running tests/main.py executes 4 scenarios and prints:
-
-Final response
-
-All A2A communication logs
-
-All MCP tool calls (printed by the server)
-
-## Project Structure
-
-```
-.
-├── agents
-│   ├── data_agent.py
-│   ├── router_agent.py
-│   └── support_agent.py
-│
-├── client
-│   └── mcp_client.py
-│
-├── mcp_server
-│   ├── database_setup.py
-│   ├── db_access.py
-│   ├── db_utils.py
-│   ├── server.py
-│   └── support.db # Auto-generated SQLite DB (delete this before re-running setup)
-│
-├── tests
-│   └── main.py # End-to-end test runner for all scenarios
-│
-├── README.md
-└── requirements.txt
+# Initialize database
+python database_setup.py
 ```
 
-
-## Installation
-
-1. Create and activate virtual environment
-   ```
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-3. Install dependencies
-   ```
-   pip install -r requirements.txt
-   ```
-5. Initialize database
-   ```
-   python mcp_server/database_setup.py
-   ```
-   
-## How to Run the System
-
-▶️ Run All Test Scenarios
-
-This script calls the router, triggers A2A flows, and interacts with the MCP server:
+## 4. Running Tests
 ```
 python -m tests.main
 ```
+This runs all main scenarios:
 
-You will see:
+Simple customer lookup
 
-  MCP tool calls (Processing request of type CallToolRequest…)
+Account upgrade assistance
 
-  Agent-to-agent logs ([RouterAgent → CustomerDataAgent] …)
+Billing escalation
 
-  Final answers for each scenario
+List active customers
 
-Scenarios executed:
-
-  Simple lookup
-
-  Upgrade support
-
-  Billing escalation
-
-  Multi-step high-priority ticket report
-
-  Multi-intent email update + ticket history
-
-## How MCP Works Here
-
-The MCP server (mcp_server/server.py) exposes 5 tools.
-Each tool directly interacts with the SQLite database through db_access.py.
-
-The client (client/mcp_client.py) communicates through stdio:
-
-  Starts MCP subprocess (python -m mcp_server.server)
-
-  Sends JSON-RPC requests
-
-  Returns Python dictionaries to the agents
-
-The system supports both:
-
-  normal Python execution
-
-  VSCode/Jupyter environments (event-loop safe)
+Multi-intent (update + ticket history)
 
 
-## How A2A Coordination Works
 
-Agents exchange structured messages stored in:
 
-  state["messages"]
 
-Example log line:
 
-  [RouterAgent → CustomerDataAgent] Requesting customer info
-
-## Multi-Intent Scenario Implemented
-
-Example query:
-
-“I am customer 12, update my email to new@email.com
- and show my ticket history”
-
-Flow:
-
-  Router extracts ID & email
-
-  Router → Data Agent: fetch customer info
-
-  Router → Data Agent: update email
-
-  Router → Data Agent: retrieve ticket history
-
-  Router → Support Agent: summarize
-
-  Return combined result + detailed A2A log
