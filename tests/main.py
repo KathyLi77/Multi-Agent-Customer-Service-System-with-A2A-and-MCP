@@ -47,11 +47,11 @@ def main():
     router = RouterAgent()
 
     scenarios = [
-        "Get customer information for ID 5",
+       "Get customer information for ID 5",
         "I'm customer 12 and need help upgrade my account",
-        "I've been charged twice, please cancel my subscription. My ID is 7",
-        "Show me all active customers who have open tickets",
-        "I am customer 10, update my email to new@email.com and show my ticket history"
+       "I've been charged twice, please cancel my subscription. My ID is 7",
+        "I am customer 10, update my email to new@email.com and show my ticket history",
+        "Show me all active customers who have open tickets?"
     ]
 
     for query in scenarios:
